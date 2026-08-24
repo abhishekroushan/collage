@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python / backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+
+# Node (if frontend ever uses vite/npm)
+node_modules/
+dist/
+.parcel-cache/
+
+# Logs / temp
+*.log
+/tmp/

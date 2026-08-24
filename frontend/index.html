@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Collage — Torn Paper Mosaic</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>Collage — Torn Paper</h1>
+  <p class="sub">Source (color) → torn by shade → fill B&W target. 100% client-side. Export PNG.</p>
+</header>
+<div id="fileProtocolWarning" style="display:none;margin:12px auto;max-width:1280px;background:#451a1a;border:1px solid #7f1d1d;color:#fecaca;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.5">
+  <b>⚠️ Opened via <code>file://</code> — JS is blocked by the browser.</b><br>
+  ES modules require <code>http://</code>. Use the local server already running: <a href="http://localhost:8000" style="color:#93c5fd">http://localhost:8000</a> (or run <code>python3 -m http.server 8000</code> in this folder). The “Drop / Click to browse” will not work until you open the <code>http://</code> URL.
+</div>
+<script>
+// show warning instantly even before modules load — no CORS on inline script
+if(location.protocol==='file:'){ document.addEventListener('DOMContentLoaded',()=>{ document.getElementById('fileProtocolWarning').style.display='block'; }); }
+</script>
+
+<main>
+  <!-- Input row -->
+  <section class="inputs">
+    <div class="input-card" id="sourceCard">
+      <h2>1 · Source (color)</h2>
+      <div class="dropzone" id="sourceDrop">
+        <canvas id="sourcePreview" width="360" height="360"></canvas>
+        <div class="dropHint"><span>Drop image / Click to browse</span></div>
+        <input type="file" id="sourceFile" accept="image/*" class="fileInputOverlay" />
+      </div>
+      <div class="urlRow">
+        <input type="url" id="sourceUrl" placeholder="https://... or paste image URL" />
+        <button id="sourceUrlBtn">Fetch URL</button>
+      </div>
+      <div class="miniHint">CORS: some hosts block canvas. If fetch fails, download &amp; drop.</div>
+    </div>
+
+    <div class="input-card" id="targetCard">
+      <h2>2 · Target (B&W)</h2>
+      <div class="dropzone" id="targetDrop">
+        <canvas id="targetPreview" width="360" height="360"></canvas>
+        <div class="dropHint"><span>Drop image / Click to browse</span></div>
+        <input type="file" id="targetFile" accept="image/*" class="fileInputOverlay" />
+      </div>
+      <div class="urlRow">
+        <input type="url" id="targetUrl" placeholder="https://... or paste image URL" />
+        <button id="targetUrlBtn">Fetch URL</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label class="check"><input type="checkbox" id="targetIsBW" checked /> auto-grayscale</label>
+        <label class="check"><input type="checkbox" id="ignoreWhiteBg" checked /> ignore white bg</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section class="controls">
+    <div class="ctrlGroup">
+      <h3>Tear</h3>
+      <label>Palette (k) <span class="val" id="vPalette">8</span><input type="range" id="paletteK" min="3" max="24" value="8" /></label>
+      <label>Pieces <span class="val" id="vPieces">120</span><input type="range" id="pieceCount" min="20" max="600" step="10" value="120" /></label>
+      <label>Roughness <span class="val" id="vRough">0.55</span><input type="range" id="roughness" min="0" max="1" step="0.05" value="0.55" /></label>
+      <label>Analysis size <span class="val" id="vAna">280</span><input type="range" id="anaSize" min="140" max="420" step="20" value="280" /></label>
+    </div>
+    <div class="ctrlGroup">
+      <h3>Target Map</h3>
+      <label>Mode
+        <select id="targetMode">
+          <option value="direct">Direct (dense) — default</option>
+          <option value="seededAuto">Seeded Auto (sparse/line-art)</option>
+          <option value="seededUser">Seeded User (click to place)</option>
+        </select>
+      </label>
+      <label>Contrast <span class="val" id="vContrast">0</span><input type="range" id="contrast" min="-100" max="100" value="0" /></label>
+      <label>Blur / diffuse <span class="val" id="vBlur">0</span><input type="range" id="blur" min="0" max="12" value="0" /></label>
+      <div id="seedHint" class="miniHint hidden">Click on target preview to place anchors. Right-click to remove. Dark→Light values cycle.</div>
+    </div>
+    <div class="ctrlGroup">
+      <h3>Composer</h3>
+      <label>Grid <span class="val" id="vGrid">auto</span><input type="range" id="gridCols" min="0" max="60" value="0" /></label>
+      <label>Luminance weight <span class="val" id="vW">0.85</span><input type="range" id="lWeight" min="0" max="1" step="0.05" value="0.85" /></label>
+      <label>Scale <span class="val" id="vScale">1.0</span><input type="range" id="scale" min="0.6" max="1.6" step="0.05" value="1.0" /></label>
+      <label>Rotation <select id="rotation"><option value="0">0°</option><option value="15" selected>±15°</option><option value="45">±45°</option><option value="180">±180°</option></select></label>
+      <label class="check"><input type="checkbox" id="allowReuse" /> allow reuse</label>
+      <label class="check"><input type="checkbox" id="showSeams" checked /> torn shadow/seam</label>
+    </div>
+    <div class="ctrlGroup actions">
+      <button id="btnTear" class="primary">Tear Source</button>
+      <button id="btnCompose" class="primary">Compose Collage</button>
+      <button id="btnExport">Export PNG</button>
+      <div id="status" class="status">Drop two images to start.</div>
+    </div>
+  </section>
+
+  <!-- Tray + Collage -->
+  <section class="outputs">
+    <div class="outCard">
+      <h3>Torn pieces — sorted by shade <span id="pieceCountLabel"></span></h3>
+      <div id="tray" class="tray"></div>
+      <div id="paletteBar" class="paletteBar"></div>
+    </div>
+    <div class="outCard">
+      <h3>Collage</h3>
+      <canvas id="collageCanvas" width="720" height="720"></canvas>
+      <div class="collageMeta"><span id="collageInfo"></span></div>
+    </div>
+  </section>
+
+  <section class="outputs" style="grid-template-columns: 1fr;">
+    <div class="outCard">
+      <h3>Brightness map (debug)</h3>
+      <canvas id="mapCanvas" width="360" height="360" style="max-width:360px"></canvas>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <small>Single-file distributable. All processing in Canvas + Web Worker. No upload.</small>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0f1115;color:#e6e6e6}
+header{padding:18px 20px;border-bottom:1px solid #222}
+h1{margin:0;font-size:22px;letter-spacing:.2px}
+.sub{margin:6px 0 0;color:#9aa0a6;font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.inputs{grid-template-columns:1fr}}
+.input-card{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px}
+.input-card h2{margin:0 0 8px;font-size:14px;color:#cbd5e1}
+.dropzone{position:relative;background:#0b0e13;border:1.5px dashed #2a2f3a;border-radius:12px;overflow:hidden;aspect-ratio:1;display:grid;place-items:center;cursor:pointer}
+.dropzone.dragover{border-color:#60a5fa;background:#0f1a2a}
+.dropzone canvas{width:100%;height:100%;object-fit:contain;background:#0b0e13}
+.dropHint{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35);color:#d1d5db;font-size:13px;pointer-events:none}
+.dropzone.hasImage .dropHint{opacity:0}
+.fileInputOverlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
+.dropzone.hasImage .fileInputOverlay{opacity:0}
+.urlRow{display:flex;gap:8px;margin-top:8px}
+.urlRow input{flex:1;background:#0b0e13;border:1px solid #2a2f3a;color:#e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px}
+.urlRow button{background:#1f2937;color:#e5e7eb;border:1px solid #2a2f3a;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px}
+.urlRow button:hover{background:#273142}
+.miniHint{font-size:11px;color:#8b95a1;margin-top:6px}
+.row{display:flex;gap:12px;align-items:center}
+.check{font-size:13px;color:#cbd5e1;display:flex;gap:6px;align-items:center}
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:1100px){.controls{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.controls{grid-template-columns:1fr}}
+.ctrlGroup{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ctrlGroup h3{margin:0;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:#9aa0a6}
+.ctrlGroup label{font-size:12px;color:#d1d5db;display:flex;flex-direction:column;gap:4px}
+.ctrlGroup label.check{flex-direction:row}
+.ctrlGroup .val{float:right;color:#93c5fd;font-variant-numeric:tabular-nums}
+.ctrlGroup input[type=range],.ctrlGroup select{width:100%;accent-color:#60a5fa;background:#0b0e13;border:1px solid #2a2f3a;border-radius:8px;padding:4px}
+.actions button{padding:10px 12px;border-radius:10px;border:1px solid #2a2f3a;cursor:pointer;font-weight:600}
+button.primary{background:#2563eb;color:white;border-color:#1d4ed8}
+button.primary:hover{background:#1d4ed8}
+#btnExport{background:#111827;color:#e5e7eb}
+.status{font-size:12px;color:#9ca3af;min-height:18px;margin-top:4px}
+.outputs{display:grid;grid-template-columns:420px 1fr;gap:16px}
+@media(max-width:1100px){.outputs{grid-template-columns:1fr}}
+.outCard{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px}
+.outCard h3{margin:0 0 8px;font-size:13px;color:#cbd5e1}
+.tray{display:flex;flex-wrap:wrap;gap:6px;max-height:520px;overflow:auto;padding:6px;background:#0b0e13;border-radius:10px;border:1px solid #262a33;min-height:120px}
+.tray .piece{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid #2a2f3a;background:#111;display:grid;place-items:center;flex:0 0 auto}
+.tray .piece canvas{width:100%;height:100%;object-fit:cover}
+.paletteBar{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.paletteBar span{height:18px;flex:1;min-width:18px;border-radius:6px;border:1px solid #2a2f3a}
+#collageCanvas{width:100%;height:auto;max-height:720px;background:#0b0e13;border-radius:12px;border:1px solid #262a33;display:block}
+.hidden{display:none}
