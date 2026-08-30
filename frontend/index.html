@@ -34,7 +34,7 @@ if(location.protocol==='file:'){ document.addEventListener('DOMContentLoaded',()
         <input type="url" id="sourceUrl" placeholder="https://... or paste image URL" />
         <button id="sourceUrlBtn">Fetch URL</button>
       </div>
-      <div class="miniHint">CORS: some hosts block canvas. If fetch fails, download &amp; drop.</div>
+      <div class="miniHint">CORS: some hosts block canvas. App retries via proxy (weserv.nl); if that fails, download &amp; drop. For <code>file://</code> use <code>http://localhost:8000</code> or GitHub Pages.</div>
     </div>
 
     <div class="input-card" id="targetCard">

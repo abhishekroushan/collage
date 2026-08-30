@@ -84,7 +84,7 @@ button.primary:hover{background:#1d4ed8}
         <input type="url" id="sourceUrl" placeholder="https://... or paste image URL" />
         <button id="sourceUrlBtn">Fetch URL</button>
       </div>
-      <div class="miniHint">CORS: some hosts block canvas. If fetch fails, download &amp; drop.</div>
+      <div class="miniHint">CORS: some hosts block canvas. App retries via proxy (weserv.nl); if that fails, download &amp; drop. For <code>file://</code> use <code>http://localhost:8000</code> or GitHub Pages.</div>
     </div>
 
     <div class="input-card" id="targetCard">
@@ -879,22 +879,56 @@ async function loadFromFile(file, kind){
 }
 async function loadFromUrl(urlStr, kind){
   if(!urlStr) return;
-  setStatus(`Fetching ${kind} URL…`);
-  // Try direct fetch as blob to avoid CORS taint if possible with crossorigin
-  try{
+  if(location.protocol==='file:'){
+    setStatus(`⚠️ file:// blocks CORS — use http://localhost:8000 or GitHub Pages. Trying anyway…`);
+  } else {
+    setStatus(`Fetching ${kind} URL…`);
+  }
+  async function tryLoad(url){
     const img=new Image();
     img.crossOrigin='anonymous';
+    img.decoding='async';
     await new Promise((res,rej)=>{
       img.onload=res; img.onerror=()=>rej(new Error('CORS or 404'));
-      img.src=urlStr;
+      img.src=url;
     });
+    return img;
+  }
+  function proxyUrls(url){
+    const stripped=url.replace(/^https?:\/\//,'');
+    return [
+      `https://images.weserv.nl/?url=${encodeURIComponent(stripped)}&output=jpg`,
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    ];
+  }
+  let img=null;
+  try{
+    img=await tryLoad(urlStr);
+  } catch(e){
+    console.warn(`direct load failed for ${urlStr}:`, e.message);
+    setStatus(`Direct fetch blocked (no CORS header). Retrying via proxy…`);
+    for(const p of proxyUrls(urlStr)){
+      try{
+        img=await tryLoad(p);
+        console.log(`proxy succeeded: ${p}`);
+        break;
+      } catch(e2){
+        console.warn(`proxy failed ${p}:`, e2.message);
+      }
+    }
+    if(!img){
+      setStatus(`URL fetch failed (CORS). Host blocks canvas. Try download & drop. ${e.message}`);
+      console.error(e);
+      return;
+    }
+  }
+  try{
     const c=canvasFromImage(img);
     if(kind==='source'){ sourceCanvas=c; drawPreview(sourcePreview, sourceCanvas, sourceDrop); }
     else { targetCanvas=c; targetW=c.width; targetH=c.height; drawPreview(targetPreview, targetCanvas, targetDrop); seeds=[]; }
-    setStatus(`Fetched ${kind}: ${c.width}×${c.height}`);
+    setStatus(`Fetched ${kind}: ${c.width}×${c.height}${img.src!==urlStr?' (via proxy)':''}`);
   } catch(e){
-    // fallback fetch via proxy not included; instruct user
-    setStatus(`URL fetch failed (CORS). Try download & drop. ${e.message}`);
+    setStatus(`Decode failed: ${e.message}`);
     console.error(e);
   }
 }

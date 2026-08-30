@@ -102,3 +102,11 @@ git add index.html
 HOOK
 chmod +x .git/hooks/pre-commit
 ```
+
+### CORS notes (Fetch URL)
+
+Direct `Fetch URL` uses `crossOrigin="anonymous"` and requires the host to send `Access-Control-Allow-Origin:*` (needed to draw to `<canvas>` without tainting). `i.pinimg.com` and `img.magnific.com` currently do **not** send that header (verified `curl -I` → no `ACA O`, only `vary: Origin`), so the browser blocks `origin 'null'` / `ERR_FAILED` — even though the image loads visually.
+
+- **Fix 1 — never use `file://` for URL fetch:** open via `http://localhost:8000` (`python3 -m http.server 8000 --directory frontend` or root) or `https://abhishekroushan.github.io/collage/`. `file://` gives opaque `origin null` which many CDNs reject (`Unsafe attempt to load URL file://...`).
+- **Fix 2 — proxy retry (now built-in):** `frontend/js/main.js:55` and `frontend/collage-standalone.html:880` (`loadFromUrl`) now automatically retry via `https://images.weserv.nl/?url=...&output=jpg` (returns `ACA O:*`) then `https://corsproxy.io/?...`. If both fail, the status shows `URL fetch failed (CORS). Try download & drop.`
+- **Fallback — download & drop:** the most reliable for Pinterest etc. Save the image locally and drop onto the canvas; no CORS check needed.
