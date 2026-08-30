@@ -33,6 +33,8 @@ if(location.protocol==='file:'){ document.addEventListener('DOMContentLoaded',()
       <div class="urlRow">
         <input type="url" id="sourceUrl" placeholder="https://... or paste image URL" />
         <button id="sourceUrlBtn">Fetch URL</button>
+        <span class="orLabel">or</span>
+        <button id="sourceUploadBtn" class="uploadBtn">Upload</button>
       </div>
       <div class="miniHint">CORS: some hosts block canvas. If fetch fails, download &amp; drop.</div>
     </div>
@@ -47,6 +49,8 @@ if(location.protocol==='file:'){ document.addEventListener('DOMContentLoaded',()
       <div class="urlRow">
         <input type="url" id="targetUrl" placeholder="https://... or paste image URL" />
         <button id="targetUrlBtn">Fetch URL</button>
+        <span class="orLabel">or</span>
+        <button id="targetUploadBtn" class="uploadBtn">Upload</button>
       </div>
       <div class="row" style="margin-top:6px">
         <label class="check"><input type="checkbox" id="targetIsBW" checked /> auto-grayscale</label>
