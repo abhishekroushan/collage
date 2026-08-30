@@ -1,3 +1,5 @@
+[![View Site](https://shields.io)](https://abhishekroushan.github.io/collage/)
+
 # Tear2Fit: Torn Paper to Collage Mosaic
 
 ## Overview
