@@ -18,6 +18,9 @@ main{max-width:1280px;margin:0 auto;padding:16px;display:flex;flex-direction:col
 .urlRow input{flex:1;background:#0b0e13;border:1px solid #2a2f3a;color:#e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px}
 .urlRow button{background:#1f2937;color:#e5e7eb;border:1px solid #2a2f3a;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px}
 .urlRow button:hover{background:#273142}
+.urlRow .orLabel{font-size:12px;color:#8b95a1;align-self:center;padding:0 2px}
+.urlRow .uploadBtn{background:#2563eb;border-color:#1d4ed8;color:#fff}
+.urlRow .uploadBtn:hover{background:#1d4ed8}
 .miniHint{font-size:11px;color:#8b95a1;margin-top:6px}
 .row{display:flex;gap:12px;align-items:center}
 .check{font-size:13px;color:#cbd5e1;display:flex;gap:6px;align-items:center}

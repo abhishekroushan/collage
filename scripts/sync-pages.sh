@@ -21,6 +21,14 @@ cp "$SRC" "$DST"
 # Ensure .nojekyll exists (disables Jekyll on Pages)
 touch "${REPO_ROOT}/.nojekyll"
 
+# Sync default images for Pages (root) and local frontend dev
+if [[ -d "${REPO_ROOT}/images" ]]; then
+  mkdir -p "${REPO_ROOT}/frontend/images"
+  cp "${REPO_ROOT}/images/"*.png "${REPO_ROOT}/frontend/images/" 2>/dev/null || true
+  cp "${REPO_ROOT}/images/"*.jpg "${REPO_ROOT}/frontend/images/" 2>/dev/null || true
+  echo "synced images/: $(ls -1 ${REPO_ROOT}/images 2>/dev/null | tr '\n' ' ')"
+fi
+
 # Verify
 if diff -q "$SRC" "$DST" >/dev/null; then
   echo "synced: $SRC -> $DST (identical, $(wc -c < "$DST") bytes)"
