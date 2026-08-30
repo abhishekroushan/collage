@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Collage — Torn Paper Mosaic</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0f1115;color:#e6e6e6}
+header{padding:18px 20px;border-bottom:1px solid #222}
+h1{margin:0;font-size:22px;letter-spacing:.2px}
+.sub{margin:6px 0 0;color:#9aa0a6;font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.inputs{grid-template-columns:1fr}}
+.input-card{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px}
+.input-card h2{margin:0 0 8px;font-size:14px;color:#cbd5e1}
+.dropzone{position:relative;background:#0b0e13;border:1.5px dashed #2a2f3a;border-radius:12px;overflow:hidden;aspect-ratio:1;display:grid;place-items:center;cursor:pointer}
+.dropzone.dragover{border-color:#60a5fa;background:#0f1a2a}
+.dropzone canvas{width:100%;height:100%;object-fit:contain;background:#0b0e13}
+.dropHint{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35);color:#d1d5db;font-size:13px;pointer-events:none}
+.dropzone.hasImage .dropHint{opacity:0}
+.fileInputOverlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
+.dropzone.hasImage .fileInputOverlay{opacity:0}
+.urlRow{display:flex;gap:8px;margin-top:8px}
+.urlRow input{flex:1;background:#0b0e13;border:1px solid #2a2f3a;color:#e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px}
+.urlRow button{background:#1f2937;color:#e5e7eb;border:1px solid #2a2f3a;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px}
+.urlRow button:hover{background:#273142}
+.miniHint{font-size:11px;color:#8b95a1;margin-top:6px}
+.row{display:flex;gap:12px;align-items:center}
+.check{font-size:13px;color:#cbd5e1;display:flex;gap:6px;align-items:center}
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:1100px){.controls{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.controls{grid-template-columns:1fr}}
+.ctrlGroup{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ctrlGroup h3{margin:0;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:#9aa0a6}
+.ctrlGroup label{font-size:12px;color:#d1d5db;display:flex;flex-direction:column;gap:4px}
+.ctrlGroup label.check{flex-direction:row}
+.ctrlGroup .val{float:right;color:#93c5fd;font-variant-numeric:tabular-nums}
+.ctrlGroup input[type=range],.ctrlGroup select{width:100%;accent-color:#60a5fa;background:#0b0e13;border:1px solid #2a2f3a;border-radius:8px;padding:4px}
+.actions button{padding:10px 12px;border-radius:10px;border:1px solid #2a2f3a;cursor:pointer;font-weight:600}
+button.primary{background:#2563eb;color:white;border-color:#1d4ed8}
+button.primary:hover{background:#1d4ed8}
+#btnExport{background:#111827;color:#e5e7eb}
+.status{font-size:12px;color:#9ca3af;min-height:18px;margin-top:4px}
+.outputs{display:grid;grid-template-columns:420px 1fr;gap:16px}
+@media(max-width:1100px){.outputs{grid-template-columns:1fr}}
+.outCard{background:#171a20;border:1px solid #262a33;border-radius:14px;padding:12px}
+.outCard h3{margin:0 0 8px;font-size:13px;color:#cbd5e1}
+.tray{display:flex;flex-wrap:wrap;gap:6px;max-height:520px;overflow:auto;padding:6px;background:#0b0e13;border-radius:10px;border:1px solid #262a33;min-height:120px}
+.tray .piece{width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid #2a2f3a;background:#111;display:grid;place-items:center;flex:0 0 auto}
+.tray .piece canvas{width:100%;height:100%;object-fit:cover}
+.paletteBar{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.paletteBar span{height:18px;flex:1;min-width:18px;border-radius:6px;border:1px solid #2a2f3a}
+#collageCanvas{width:100%;height:auto;max-height:720px;background:#0b0e13;border-radius:12px;border:1px solid #262a33;display:block}
+.hidden{display:none}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>Collage — Torn Paper</h1>
+  <p class="sub">Source (color) → torn by shade → fill B&W target. 100% client-side. Export PNG.</p>
+</header>
+<div id="fileProtocolWarning" style="display:none;margin:12px auto;max-width:1280px;background:#451a1a;border:1px solid #7f1d1d;color:#fecaca;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.5">
+  <b>⚠️ Opened via <code>file://</code> — JS is blocked by the browser.</b><br>
+  ES modules require <code>http://</code>. Use the local server already running: <a href="http://localhost:8000" style="color:#93c5fd">http://localhost:8000</a> (or run <code>python3 -m http.server 8000</code> in this folder). The “Drop / Click to browse” will not work until you open the <code>http://</code> URL.
+</div>
+<script>
+// show warning instantly even before modules load — no CORS on inline script
+/* standalone: file:// allowed, no warning */
+</script>
+
+<main>
+  <!-- Input row -->
+  <section class="inputs">
+    <div class="input-card" id="sourceCard">
+      <h2>1 · Source (color)</h2>
+      <div class="dropzone" id="sourceDrop">
+        <canvas id="sourcePreview" width="360" height="360"></canvas>
+        <div class="dropHint"><span>Drop image / Click to browse</span></div>
+        <input type="file" id="sourceFile" accept="image/*" class="fileInputOverlay" />
+      </div>
+      <div class="urlRow">
+        <input type="url" id="sourceUrl" placeholder="https://... or paste image URL" />
+        <button id="sourceUrlBtn">Fetch URL</button>
+      </div>
+      <div class="miniHint">CORS: some hosts block canvas. If fetch fails, download &amp; drop.</div>
+    </div>
+
+    <div class="input-card" id="targetCard">
+      <h2>2 · Target (B&W)</h2>
+      <div class="dropzone" id="targetDrop">
+        <canvas id="targetPreview" width="360" height="360"></canvas>
+        <div class="dropHint"><span>Drop image / Click to browse</span></div>
+        <input type="file" id="targetFile" accept="image/*" class="fileInputOverlay" />
+      </div>
+      <div class="urlRow">
+        <input type="url" id="targetUrl" placeholder="https://... or paste image URL" />
+        <button id="targetUrlBtn">Fetch URL</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label class="check"><input type="checkbox" id="targetIsBW" checked /> auto-grayscale</label>
+        <label class="check"><input type="checkbox" id="ignoreWhiteBg" checked /> ignore white bg</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section class="controls">
+    <div class="ctrlGroup">
+      <h3>Tear</h3>
+      <label>Palette (k) <span class="val" id="vPalette">8</span><input type="range" id="paletteK" min="3" max="24" value="8" /></label>
+      <label>Pieces <span class="val" id="vPieces">120</span><input type="range" id="pieceCount" min="20" max="600" step="10" value="120" /></label>
+      <label>Roughness <span class="val" id="vRough">0.55</span><input type="range" id="roughness" min="0" max="1" step="0.05" value="0.55" /></label>
+      <label>Analysis size <span class="val" id="vAna">280</span><input type="range" id="anaSize" min="140" max="420" step="20" value="280" /></label>
+    </div>
+    <div class="ctrlGroup">
+      <h3>Target Map</h3>
+      <label>Mode
+        <select id="targetMode">
+          <option value="direct">Direct (dense) — default</option>
+          <option value="seededAuto">Seeded Auto (sparse/line-art)</option>
+          <option value="seededUser">Seeded User (click to place)</option>
+        </select>
+      </label>
+      <label>Contrast <span class="val" id="vContrast">0</span><input type="range" id="contrast" min="-100" max="100" value="0" /></label>
+      <label>Blur / diffuse <span class="val" id="vBlur">0</span><input type="range" id="blur" min="0" max="12" value="0" /></label>
+      <div id="seedHint" class="miniHint hidden">Click on target preview to place anchors. Right-click to remove. Dark→Light values cycle.</div>
+    </div>
+    <div class="ctrlGroup">
+      <h3>Composer</h3>
+      <label>Grid <span class="val" id="vGrid">auto</span><input type="range" id="gridCols" min="0" max="60" value="0" /></label>
+      <label>Luminance weight <span class="val" id="vW">0.85</span><input type="range" id="lWeight" min="0" max="1" step="0.05" value="0.85" /></label>
+      <label>Scale <span class="val" id="vScale">1.0</span><input type="range" id="scale" min="0.6" max="1.6" step="0.05" value="1.0" /></label>
+      <label>Rotation <select id="rotation"><option value="0">0°</option><option value="15" selected>±15°</option><option value="45">±45°</option><option value="180">±180°</option></select></label>
+      <label class="check"><input type="checkbox" id="allowReuse" /> allow reuse</label>
+      <label class="check"><input type="checkbox" id="showSeams" checked /> torn shadow/seam</label>
+    </div>
+    <div class="ctrlGroup actions">
+      <button id="btnTear" class="primary">Tear Source</button>
+      <button id="btnCompose" class="primary">Compose Collage</button>
+      <button id="btnExport">Export PNG</button>
+      <div id="status" class="status">Drop two images to start.</div>
+    </div>
+  </section>
+
+  <!-- Tray + Collage -->
+  <section class="outputs">
+    <div class="outCard">
+      <h3>Torn pieces — sorted by shade <span id="pieceCountLabel"></span></h3>
+      <div id="tray" class="tray"></div>
+      <div id="paletteBar" class="paletteBar"></div>
+    </div>
+    <div class="outCard">
+      <h3>Collage</h3>
+      <canvas id="collageCanvas" width="720" height="720"></canvas>
+      <div class="collageMeta"><span id="collageInfo"></span></div>
+    </div>
+  </section>
+
+  <section class="outputs" style="grid-template-columns: 1fr;">
+    <div class="outCard">
+      <h3>Brightness map (debug)</h3>
+      <canvas id="mapCanvas" width="360" height="360" style="max-width:360px"></canvas>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <small>Standalone offline build — double-click works. No server needed. All processing in Canvas. No upload.</small>
+</footer>
+
+<script>
+// color utils: sRGB -> linear -> XYZ -> LAB, and helpers
+// All functions operate on 0-255 sRGB
+function srgbToLinear(c){
+  c/=255;
+  return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+}
+function linearToSrgb(c){
+  const v = c<=0.0031308 ? 12.92*c : 1.055*Math.pow(c,1/2.4)-0.055;
+  return Math.min(255, Math.max(0, Math.round(v*255)));
+}
+
+// D65
+function rgbToXyz(r,g,b){
+  const R=srgbToLinear(r), G=srgbToLinear(g), B=srgbToLinear(b);
+  return [
+    R*0.4124564 + G*0.3575761 + B*0.1804375,
+    R*0.2126729 + G*0.7151522 + B*0.0721750,
+    R*0.0193339 + G*0.1191920 + B*0.9503041,
+  ];
+}
+function xyzToLab(x,y,z){
+  // reference white D65
+  const Xn=0.95047, Yn=1.0, Zn=1.08883;
+  function f(t){ return t>0.008856 ? Math.cbrt(t) : (7.787*t + 16/116); }
+  const fx=f(x/Xn), fy=f(y/Yn), fz=f(z/Zn);
+  return [116*fy-16, 500*(fx-fy), 200*(fy-fz)];
+}
+function rgbToLab(r,g,b){
+  const [x,y,z]=rgbToXyz(r,g,b);
+  return xyzToLab(x,y,z);
+}
+function labDistance(a,b,wL=1,wAB=1){
+  // weighted: wL for L, wAB for a,b
+  const dL=(a[0]-b[0])*wL, da=(a[1]-b[1])*wAB, db=(a[2]-b[2])*wAB;
+  return Math.sqrt(dL*dL+da*da+db*db);
+}
+function luminanceLab(lab){ return lab[0]; }
+function rgbToLuminance(r,g,b){
+  // fast perceptual L* approx via lab L, but also simple
+  return rgbToLab(r,g,b)[0];
+}
+function applyContrast(v, contrast){
+  // v in [0,255], contrast in [-100,100]
+  const f = (259*(contrast+255))/(255*(259-contrast));
+  return Math.min(255, Math.max(0, Math.round(f*(v-128)+128)));
+}
+
+
+// ===== merged modules =====
+// k-means in LAB space. Input: Uint8ClampedArray rgba, length = w*h*4
+// Returns { palette: [{r,g,b, lab}], labels: Uint16Array length N, paletteLAB: [] }
+function quantize(pixels, w, h, k=8, opts={}){
+  const samples = opts.samples ?? 5000;
+  const iters = opts.iters ?? 12;
+  const N = w*h;
+  // collect sample indices
+  const idxs = [];
+  if (N > samples){
+    const used = new Set();
+    while(idxs.length < samples){
+      const r = Math.floor(Math.random()*N);
+      if(!used.has(r)){ used.add(r); idxs.push(r); }
+    }
+  } else {
+    for(let i=0;i<N;i++) idxs.push(i);
+  }
+  const sampleLabs = idxs.map(i=>{
+    const o=i*4; return rgbToLab(pixels[o], pixels[o+1], pixels[o+2]);
+  });
+  const sampleRgbs = idxs.map(i=>{ const o=i*4; return [pixels[o], pixels[o+1], pixels[o+2]]; });
+
+  // kmeans++ init
+  const centers = [];
+  const centerLabs = [];
+  let first = Math.floor(Math.random()*sampleLabs.length);
+  centers.push(sampleRgbs[first].slice());
+  centerLabs.push(sampleLabs[first].slice());
+  for(let c=1;c<k;c++){
+    // distance to nearest center
+    let dists = sampleLabs.map(l=>{
+      let best=Infinity;
+      for(const cl of centerLabs){
+        const d = (l[0]-cl[0])**2 + (l[1]-cl[1])**2 + (l[2]-cl[2])**2;
+        if(d<best) best=d;
+      }
+      return best;
+    });
+    const sum = dists.reduce((a,b)=>a+b,0);
+    let r = Math.random()*sum;
+    let pick=0;
+    for(let i=0;i<dists.length;i++){ r-=dists[i]; if(r<=0){ pick=i; break; } }
+    centers.push(sampleRgbs[pick].slice());
+    centerLabs.push(sampleLabs[pick].slice());
+  }
+
+  let labelsSample = new Uint16Array(sampleLabs.length);
+  for(let iter=0; iter<iters; iter++){
+    // assign
+    for(let i=0;i<sampleLabs.length;i++){
+      const lab = sampleLabs[i];
+      let best=0, bestD=Infinity;
+      for(let c=0;c<k;c++){
+        const cl=centerLabs[c];
+        const d=(lab[0]-cl[0])**2 + (lab[1]-cl[1])**2 + (lab[2]-cl[2])**2;
+        if(d<bestD){ bestD=d; best=c; }
+      }
+      labelsSample[i]=best;
+    }
+    // recompute
+    const sums = Array.from({length:k},()=>[0,0,0,0]); // lab sums + count
+    // we average in LAB then convert back? simpler average RGB then convert
+    const rgbSums = Array.from({length:k},()=>[0,0,0,0]);
+    for(let i=0;i<sampleLabs.length;i++){
+      const c=labelsSample[i];
+      rgbSums[c][0]+=sampleRgbs[i][0];
+      rgbSums[c][1]+=sampleRgbs[i][1];
+      rgbSums[c][2]+=sampleRgbs[i][2];
+      rgbSums[c][3]++;
+    }
+    for(let c=0;c<k;c++){
+      if(rgbSums[c][3]===0) continue;
+      const r=Math.round(rgbSums[c][0]/rgbSums[c][3]);
+      const g=Math.round(rgbSums[c][1]/rgbSums[c][3]);
+      const b=Math.round(rgbSums[c][2]/rgbSums[c][3]);
+      centers[c]=[r,g,b];
+      centerLabs[c]=rgbToLab(r,g,b);
+    }
+  }
+
+  // build final palette + LAB
+  const palette = centers.map(([r,g,b])=>({r,g,b, lab: rgbToLab(r,g,b)}));
+  const paletteLabs = palette.map(p=>p.lab);
+
+  // assign all pixels (full res) to palette
+  const labels = new Uint16Array(N);
+  for(let i=0;i<N;i++){
+    const o=i*4;
+    const lab = rgbToLab(pixels[o], pixels[o+1], pixels[o+2]);
+    let best=0,bestD=Infinity;
+    for(let c=0;c<k;c++){
+      const cl=paletteLabs[c];
+      const d=(lab[0]-cl[0])**2 + (lab[1]-cl[1])**2 + (lab[2]-cl[2])**2;
+      if(d<bestD){bestD=d; best=c}
+    }
+    labels[i]=best;
+  }
+  return { palette, labels, paletteLabs };
+}
+
+
+// ===== merged modules =====
+// hash noise for roughness
+function hash2(x,y){ const s=Math.sin(x*12.9898 + y*78.233)*43758.5453; return s-Math.floor(s); }
+function smoothstep(t){ return t*t*(3-2*t); }
+function valueNoise(x,y){
+  const xi=Math.floor(x), yi=Math.floor(y);
+  const xf=x-xi, yf=y-yi;
+  const h00=hash2(xi,yi), h10=hash2(xi+1,yi), h01=hash2(xi,yi+1), h11=hash2(xi+1,yi+1);
+  const u=smoothstep(xf), v=smoothstep(yf);
+  const a=h00*(1-u)+h10*u, b=h01*(1-u)+h11*u;
+  return a*(1-v)+b*v;
+}
+function fbm(x,y){
+  let v=0, amp=0.5, freq=1;
+  for(let i=0;i<3;i++){ v+=valueNoise(x*freq,y*freq)*amp; freq*=2; amp*=0.5; }
+  return v;
+}
+
+/**
+ * Tear source image into pieces grouped by color shade.
+ * - quantize to palette k
+ * - for each palette color, allocate piece count proportional to area
+ * - within each color's pixel set, run Voronoi via random sub-seeds
+ * - add ragged edge by perturbing border pixels
+ * Returns { pieces, palette }
+ * piece = { id, colorIdx, lab, r,g,b, bounds:{x0,y0,x1,y1,w,h}, canvas, pixelCount, avgLab }
+ */
+async function tearImage(sourceCanvas, opts){
+  const k = opts.paletteK ?? 8;
+  const totalPieces = opts.pieceCount ?? 120;
+  const roughness = opts.roughness ?? 0.55;
+  const anaSize = opts.anaSize ?? 280;
+
+  // downscale to anaSize for analysis (keep aspect)
+  const sw = sourceCanvas.width, sh = sourceCanvas.height;
+  const scale = Math.min(anaSize / sw, anaSize / sh, 1);
+  const aw = Math.max(1, Math.round(sw*scale));
+  const ah = Math.max(1, Math.round(sh*scale));
+  const ana = document.createElement('canvas');
+  ana.width=aw; ana.height=ah;
+  const actx=ana.getContext('2d');
+  actx.drawImage(sourceCanvas, 0,0, aw, ah);
+  const imgData = actx.getImageData(0,0,aw,ah);
+  const data = imgData.data;
+
+  // quantize
+  const { palette, labels } = quantize(data, aw, ah, k, { samples: 6000, iters: 10 });
+
+  // count per palette
+  const counts = new Array(k).fill(0);
+  for(let i=0;i<labels.length;i++) counts[labels[i]]++;
+
+  // allocate pieces per palette proportional
+  const totalPixels = aw*ah;
+  const piecesPerPalette = counts.map(c=> Math.max( (c/totalPixels)*totalPieces , 0));
+  // ensure integer sum ~ totalPieces
+  let sum = piecesPerPalette.reduce((a,b)=>a+b,0);
+  // adjust largest
+  const raw = piecesPerPalette.map(v=> Math.max(1, Math.round(v)) );
+  // if some palette tiny (<1% area) -> still 1 piece, may overshoot; normalize
+  let rawSum = raw.reduce((a,b)=>a+b,0);
+  // scale down if overshoot
+  if(rawSum > totalPieces){
+    const factor = totalPieces / rawSum;
+    for(let i=0;i<k;i++) raw[i]=Math.max(1, Math.round(raw[i]*factor));
+    rawSum = raw.reduce((a,b)=>a+b,0);
+  }
+  // distribute remainder
+  while(rawSum < totalPieces){
+    let idx = counts.indexOf(Math.max(...counts));
+    // find palette with largest fractional remainder
+    let best=-1, bestF=-1;
+    for(let i=0;i<k;i++){ const f=piecesPerPalette[i]-raw[i]; if(f>bestF){bestF=f; best=i;}}
+    raw[best]++; rawSum++;
+  }
+  while(rawSum > totalPieces){
+    let best=-1, bestF=Infinity;
+    for(let i=0;i<k;i++){ if(raw[i]<=1) continue; const f=piecesPerPalette[i]-raw[i]; if(f<bestF){bestF=f;best=i;}}
+    if(best===-1) break;
+    raw[best]--; rawSum--;
+  }
+
+  // Build per-color pixel indices
+  const perColorIndices = Array.from({length:k}, ()=>[]);
+  for(let i=0;i<labels.length;i++) perColorIndices[labels[i]].push(i);
+
+  // For each color, generate sub-seeds by sampling random pixel positions
+  const pieces = [];
+  let globalId=0;
+  // full-res source for piece canvases: we will map ana pixels to full-res via scale
+  // Instead of full-res extraction now, we store ana-space mask and later extract from sourceCanvas at full res by mapping
+  for(let ci=0; ci<k; ci++){
+    const nPieces = raw[ci];
+    const indices = perColorIndices[ci];
+    if(indices.length===0) continue;
+    // pick nPieces seeds randomly from indices (without replacement, kmeans++ style could be better but random ok)
+    const seeds = [];
+    const used = new Set();
+    // use spatially spread seeds: pick random, then farthest point sampling for better spread
+    // start random
+    seeds.push( indices[Math.floor(Math.random()*indices.length)] );
+    used.add(seeds[0]);
+    while(seeds.length < nPieces){
+      // pick candidate farthest from existing seeds (approximate)
+      let bestIdx=-1, bestDist=-1;
+      // sample 20 candidates for speed
+      for(let candTry=0;candTry<20;candTry++){
+        const cand = indices[Math.floor(Math.random()*indices.length)];
+        if(used.has(cand)) continue;
+        const cx=cand%aw, cy=Math.floor(cand/aw);
+        let minD=Infinity;
+        for(const s of seeds){
+          const sx=s%aw, sy=Math.floor(s/aw);
+          const d=(cx-sx)**2 + (cy-sy)**2;
+          if(d<minD) minD=d;
+        }
+        if(minD>bestDist){bestDist=minD; bestIdx=cand;}
+      }
+      if(bestIdx===-1) bestIdx = indices[Math.floor(Math.random()*indices.length)];
+      seeds.push(bestIdx);
+      used.add(bestIdx);
+    }
+    // assign each pixel in indices to nearest seed (Voronoi constrained to color)
+    const seedPos = seeds.map(s=>[s%aw, Math.floor(s/aw)]);
+    const assignment = new Map(); // pieceLocalIdx -> pixelIndices[]
+    const localLists = Array.from({length:nPieces}, ()=>[]);
+    for(const pix of indices){
+      const x=pix%aw, y=Math.floor(pix/aw);
+      let best=0, bestD=Infinity;
+      for(let s=0;s<nPieces;s++){
+        const [sx,sy]=seedPos[s];
+        const d=(x-sx)**2 + (y-sy)**2;
+        if(d<bestD){bestD=d; best=s;}
+      }
+      localLists[best].push(pix);
+    }
+    // create piece objects
+    for(let li=0; li<nPieces; li++){
+      const pixs = localLists[li];
+      if(pixs.length===0) continue;
+      // bounds
+      let x0=aw, y0=ah, x1=-1, y1=-1;
+      for(const p of pixs){
+        const x=p%aw, y=Math.floor(p/aw);
+        if(x<x0) x0=x; if(x>x1) x1=x; if(y<y0) y0=y; if(y>y1) y1=y;
+      }
+      const bw = x1-x0+1, bh = y1-y0+1;
+      // add 1px padding for edge effect
+      const pad = 2;
+      // create mask set for quick lookup
+      const set = new Set(pixs);
+      // ragged perturbation: for border pixels, randomly erode/dilate a bit
+      // We'll build an expanded mask with noise
+      // Instead of complex morphology, we just keep original mask and will
+      // slightly perturb edge when rendering via clipping wiggle (later).
+      // For now piece canvas will be pixel-perfect mask scaled to full res.
+      // Compute average color LAB from source's full res? Use palette color for avg but compute actual mean for better match.
+      let sumR=0,sumG=0,sumB=0;
+      for(const p of pixs){ const o=p*4; sumR+=data[o]; sumG+=data[o+1]; sumB+=data[o+2]; }
+      const avgR=Math.round(sumR/pixs.length), avgG=Math.round(sumG/pixs.length), avgB=Math.round(sumB/pixs.length);
+      const avgLab = rgbToLab(avgR,avgG,avgB);
+
+      // Build piece canvas at full-res scale (or ana scale for preview). Use ana scale for speed, upscale later in composer
+      // We'll store ana-scale canvas for tray preview; composer will map to target size.
+      const c = document.createElement('canvas');
+      c.width = bw + pad*2;
+      c.height = bh + pad*2;
+      const ctx=c.getContext('2d');
+      // draw masked pixels: fill with source ana image cropped
+      // putImageData approach: create ImageData
+      const pieceImg = ctx.createImageData(c.width, c.height);
+      // For each pixel in piece, copy from ana
+      for(const p of pixs){
+        const x=p%aw, y=Math.floor(p/aw);
+        const o=p*4;
+        const r=data[o], g=data[o+1], b=data[o+2], a=data[o+3];
+        const dx = x - x0 + pad, dy = y - y0 + pad;
+        const di = (dy*c.width + dx)*4;
+        pieceImg.data[di]=r; pieceImg.data[di+1]=g; pieceImg.data[di+2]=b; pieceImg.data[di+3]=a;
+      }
+      // edge raggedness: perturb border pixels by randomly adding/removing edge noise
+      if(roughness > 0.01){
+        // identify border pixels: pixel in set but neighbor not in set
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        for(const p of [...pixs]){
+          const x=p%aw, y=Math.floor(p/aw);
+          let isBorder=false;
+          for(const [dx,dy] of dirs){
+            const nx=x+dx, ny=y+dy;
+            if(nx<0||nx>=aw||ny<0||ny>=ah){ isBorder=true; break; }
+            const nid=ny*aw+nx;
+            if(!set.has(nid)){ isBorder=true; break; }
+          }
+          if(!isBorder) continue;
+          const n = fbm(x*0.35, y*0.35); // 0-1
+          const thresh = 0.35 + roughness*0.3; // higher roughness -> more erosion/dilation
+          if(n > thresh){
+            // erode: make transparent
+            const dx=x-x0+pad, dy=y-y0+pad;
+            const di=(dy*c.width+dx)*4;
+            pieceImg.data[di+3]=0;
+          } else if(n < 0.25 && roughness>0.6){
+            // dilate: fill neighbor outside with same color (simple)
+            for(const [dx,dy] of dirs){
+              const nx=x+dx, ny=y+dy;
+              if(nx<x0-pad||nx>x1+pad||ny<y0-pad||ny>y1+pad) continue;
+              const nid=ny*aw+nx;
+              if(set.has(nid)) continue;
+              const di2=((ny-y0+pad)*c.width + (nx-x0+pad))*4;
+              if(pieceImg.data[di2+3]===0 && Math.random()<0.4){
+                const o=p*4;
+                pieceImg.data[di2]=data[o]; pieceImg.data[di2+1]=data[o+1]; pieceImg.data[di2+2]=data[o+2]; pieceImg.data[di2+3]=200;
+              }
+            }
+          }
+        }
+      }
+      ctx.putImageData(pieceImg,0,0);
+
+      pieces.push({
+        id: globalId++,
+        colorIdx: ci,
+        r: avgR, g: avgG, b: avgB,
+        lab: avgLab,
+        bounds: { x0,y0,x1,y1,w:bw,h:bh, pad },
+        canvas: c,
+        pixelCount: pixs.length,
+        paletteColor: palette[ci],
+      });
+    }
+  }
+
+  // sort tray by luminance (L*), then hue
+  pieces.sort((a,b)=> a.lab[0]-b.lab[0] || a.lab[1]-b.lab[1]);
+
+  // Also return fullRes blobs for composer scaling? For now ana canvases are sufficient.
+  // Store meta for fullRes extraction if needed
+  return { pieces, palette, aw, ah, sw, sh, sourceCanvas };
+}
+
+
+// ===== merged modules =====
+// Build brightness map Float32Array size w*h, values 0-100 (LAB L*)
+// opts: { mode:'direct'|'seededAuto'|'seededUser', contrast, blur, ignoreWhiteBg, seeds: [{x,y,L}] }
+// seeds for user mode are in canvas coordinates 0..w,0..h with L 0-100
+function buildBrightnessMap(targetCanvas, opts){
+  const w=targetCanvas.width, h=targetCanvas.height;
+  const ctx=targetCanvas.getContext('2d');
+  const img=ctx.getImageData(0,0,w,h);
+  const data=img.data;
+  const out = new Float32Array(w*h);
+  const contrast = opts.contrast ?? 0;
+  const mode = opts.mode ?? 'direct';
+
+  // helper to get L*
+  function pixelL(i){
+    const o=i*4;
+    let r=data[o], g=data[o+1], b=data[o+2];
+    if(contrast!==0){ r=applyContrast(r,contrast); g=applyContrast(g,contrast); b=applyContrast(b,contrast); }
+    // if auto grayscale, use luminance, else use actual Lab from grayscale image (target is B&W anyway)
+    const lab = rgbToLab(r,g,b);
+    return lab[0]; // 0-100
+  }
+
+  if(mode === 'direct'){
+    for(let i=0;i<w*h;i++) out[i]=pixelL(i);
+  } else if(mode === 'seededAuto'){
+    // auto seeds: pick darkest and lightest regions via quantiles
+    const Ls = new Float32Array(w*h);
+    for(let i=0;i<w*h;i++) Ls[i]=pixelL(i);
+    // find thresholds: 10th and 90th percentile
+    const sorted = Float32Array.from(Ls).sort();
+    const darkThresh = sorted[Math.floor(sorted.length*0.12)];
+    const lightThresh = sorted[Math.floor(sorted.length*0.88)];
+    // build seeds as centroids of dark/light blobs (sample 80 points each)
+    const darkSeeds=[], lightSeeds=[];
+    for(let i=0;i<w*h;i++) if(Ls[i]<=darkThresh) darkSeeds.push(i);
+    for(let i=0;i<w*h;i++) if(Ls[i]>=lightThresh) lightSeeds.push(i);
+    // if sparse line-art, darkSeeds will be thin lines -> propagate via distance field
+    const seeds = [];
+    // sample at most 30 dark + 30 light as anchors
+    const pick = (arr, n, Lval)=>{
+      const step=Math.max(1, Math.floor(arr.length/n));
+      for(let k=0;k<arr.length && seeds.length<n;k+=step){
+        const idx=arr[k]; seeds.push({x: idx%w, y: Math.floor(idx/w), L: Lval});
+      }
+    };
+    pick(darkSeeds, 20, 0);
+    pick(lightSeeds, 20, 100);
+    // if too few seeds, fallback to direct for those pixels? we do Voronoi interpolation
+    interpolateFromSeeds(out, w,h, seeds, Ls);
+  } else if(mode === 'seededUser'){
+    const seeds = opts.seeds ?? [];
+    if(seeds.length===0){
+      for(let i=0;i<w*h;i++) out[i]=pixelL(i);
+    } else {
+      // build base map then overwrite with interpolated seeds influence?
+      // For user mode, we interpolate seeds to fill whole canvas, ignoring original grays except as optional bias
+      interpolateFromSeeds(out, w,h, seeds, null);
+    }
+  }
+
+  // optional blur/diffuse (simple box blur iterations)
+  const blur = opts.blur ?? 0;
+  if(blur>0){
+    const iters = Math.min(6, Math.max(1, Math.round(blur/2)));
+    const radius = Math.max(1, Math.round(blur));
+    boxBlur(out, w,h, radius, iters);
+  }
+
+  // ignore white background: mark bright areas as no-fill? We'll handle in composer, not map
+  return out;
+}
+
+function interpolateFromSeeds(out, w,h, seeds, baseLs){
+  // Inverse distance weighting (IDW) + falloff
+  // For each pixel, compute weighted average of seed L by 1/(dist^p + eps)
+  // p=2, with influence radius. For performance, we use brute force but w*h up to ~360*360=129k * 40 seeds =5M ok
+  const p=1.8;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      let num=0, den=0;
+      let minDist=Infinity, nearestL=50;
+      for(const s of seeds){
+        const dx=x-s.x, dy=y-s.y;
+        const d=Math.sqrt(dx*dx+dy*dy)+1;
+        if(d<minDist){minDist=d; nearestL=s.L;}
+        const wgt = 1 / Math.pow(d, p);
+        num += s.L * wgt;
+        den += wgt;
+      }
+      let v = den>0 ? num/den : nearestL;
+      // if baseLs provided (auto mode), blend with original 30% to keep structure
+      if(baseLs){
+        const idx=y*w+x;
+        const base=baseLs[idx];
+        v = v*0.65 + base*0.35;
+      }
+      out[y*w+x]=Math.max(0, Math.min(100, v));
+    }
+  }
+}
+
+function boxBlur(arr,w,h,radius,iters){
+  const tmp=new Float32Array(arr.length);
+  for(let iter=0; iter<iters; iter++){
+    // horizontal
+    for(let y=0;y<h;y++){
+      let sum=0, count=0;
+      for(let x=-radius;x<w+radius;x++){
+        if(x+radius < w) { sum+=arr[y*w + Math.min(w-1, Math.max(0,x+radius))]; count++; }
+        // not trivial sliding window due to edges; just naive for simplicity (w up to 400, radius <=12, cost fine)
+      }
+    }
+    // naive: O(w*h*r^2) but w=360,r=6 => ~16M per iter okay
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        let s=0,c=0;
+        for(let dy=-radius; dy<=radius; dy++){
+          const ny=y+dy; if(ny<0||ny>=h) continue;
+          for(let dx=-radius; dx<=radius; dx++){
+            const nx=x+dx; if(nx<0||nx>=w) continue;
+            s+=arr[ny*w+nx]; c++;
+          }
+        }
+        tmp[y*w+x]=s/c;
+      }
+    }
+    arr.set(tmp);
+  }
+}
+function renderMapToCanvas(map,w,h, canvas){
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  const img=ctx.createImageData(w,h);
+  for(let i=0;i<w*h;i++){
+    const v=Math.round(map[i]/100*255);
+    img.data[i*4]=v; img.data[i*4+1]=v; img.data[i*4+2]=v; img.data[i*4+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+}
+
+
+// ===== merged modules =====
+// Compose collage on outCanvas (target size)
+// pieces: from tear.js (each has lab, canvas)
+// brightnessMap: Float32Array w*h in L* 0-100
+// targetCanvas: source of w/h for reference (used for aspect)
+// opts: { gridCols (0=auto), lWeight, scale, rotation, allowReuse, showSeams, ignoreWhiteBg }
+function compose(outCanvas, pieces, brightnessMap, targetW, targetH, opts){
+  const gridCols = opts.gridCols ?? 0;
+  const lWeight = opts.lWeight ?? 0.85;
+  const abWeight = 1 - lWeight*0.7; // keep some chroma influence but lower
+  const scale = opts.scale ?? 1.0;
+  const rotOpt = opts.rotation ?? 15;
+  const allowReuse = opts.allowReuse ?? false;
+  const showSeams = opts.showSeams ?? true;
+  const ignoreWhiteBg = opts.ignoreWhiteBg ?? true;
+
+  // auto grid: try to make cells roughly square and count ~= pieces
+  const N = pieces.length;
+  let cols, rows;
+  if(gridCols>0){ cols=gridCols; rows=Math.ceil(targetH / (targetW/cols)); }
+  else {
+    const aspect = targetW/targetH;
+    cols = Math.max(4, Math.round(Math.sqrt(N*aspect)));
+    rows = Math.max(4, Math.round(N/cols));
+    // adjust to cover canvas nicely: ensure cols*rows >= N or fills canvas
+    // Instead of matching N, fill canvas grid; each cell gets a piece (reuse if needed)
+    cols = Math.max(8, Math.min(40, cols));
+    rows = Math.max(8, Math.min(40, Math.round(cols/aspect)));
+  }
+  const cellW = targetW/cols, cellH = targetH/rows;
+
+  outCanvas.width = targetW;
+  outCanvas.height = targetH;
+  const ctx = outCanvas.getContext('2d');
+  ctx.fillStyle = '#0b0e13';
+  ctx.fillRect(0,0,targetW,targetH);
+
+  // Precompute target cell average L
+  const cells = [];
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x0=Math.floor(c*cellW), y0=Math.floor(r*cellH);
+      const x1=Math.min(targetW, Math.ceil((c+1)*cellW)), y1=Math.min(targetH, Math.ceil((r+1)*cellH));
+      let sum=0, cnt=0;
+      for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){ sum+=brightnessMap[y*targetW+x]; cnt++; }
+      const avgL = cnt? sum/cnt : 50;
+      // ignore white background cell
+      if(ignoreWhiteBg && avgL > 92) continue; // skip very bright cells -> leave paper bg
+      cells.push({r,c,x0,y0,x1,y1,cx:(x0+x1)/2, cy:(y0+y1)/2, w:x1-x0,h:y1-y0, avgL});
+    }
+  }
+
+  // For matching, sort cells dark->light for deterministic greedy
+  cells.sort((a,b)=>a.avgL-b.avgL);
+
+  // availability
+  const used = new Set();
+  const pieceByL = [...pieces].sort((a,b)=>a.lab[0]-b.lab[0]);
+
+  function findBestPiece(targetL){
+    let best=null, bestD=Infinity, bestIdx=-1;
+    const pool = allowReuse ? pieces : pieces.filter((_,i)=>!used.has(i));
+    const idxPool = allowReuse ? pieces.map((_,i)=>i) : pieces.map((_,i)=>i).filter(i=>!used.has(i));
+    // To speed, we can early prune by L but N up to 600, cells up to 1200 => 720k distance calcs fine
+    for(let k=0;k<pool.length;k++){
+      const p=pool[k];
+      // distance primarily on L, slight on chroma: we want neutral pieces to be flexible
+      // For target, we have no chroma (grayscale), so we compare piece chroma distance to 0 (gray) weighted low
+      // Equivalent to penalizing highly saturated pieces when target is mid-gray? Keep simple: only L distance + small saturation penalty
+      const dL = Math.abs(p.lab[0] - targetL) * lWeight;
+      const dC = Math.sqrt(p.lab[1]**2 + p.lab[2]**2) * (1-lWeight)*0.2; // prefer less saturated when weight low
+      const d = dL + dC;
+      if(d < bestD){ bestD=d; best=p; bestIdx=idxPool[k]; }
+    }
+    if(bestIdx!==-1 && !allowReuse) used.add(bestIdx);
+    return best;
+  }
+
+  // Draw
+  for(const cell of cells){
+    const piece = findBestPiece(cell.avgL);
+    if(!piece) continue;
+    const cx=cell.cx, cy=cell.cy;
+    const baseW = cell.w * scale, baseH = cell.h * scale;
+    // piece canvas aspect
+    const pw=piece.canvas.width, ph=piece.canvas.height;
+    const fitScale = Math.min(baseW/pw, baseH/ph) * 0.96; // 0.96 leaves seam gap
+    const drawW = pw * fitScale, drawH = ph * fitScale;
+    const rot = rotOpt===0 ? 0 : (Math.random()*2-1)* (rotOpt*Math.PI/180);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    if(showSeams){
+      ctx.shadowColor='rgba(0,0,0,0.65)';
+      ctx.shadowBlur=6;
+      ctx.shadowOffsetY=3;
+    }
+    // draw piece centered
+    const jitterX = (Math.random()-0.5)* cell.w*0.08;
+    const jitterY = (Math.random()-0.5)* cell.h*0.08;
+    ctx.translate(jitterX, jitterY);
+    // optional white paper under to simulate thickness
+    if(showSeams){
+      ctx.fillStyle='rgba(255,255,255,0.08)';
+      ctx.fillRect(-drawW/2-1, -drawH/2-1, drawW+2, drawH+2);
+    }
+    ctx.drawImage(piece.canvas, -drawW/2, -drawH/2, drawW, drawH);
+    // seam line faint
+    if(showSeams){
+      ctx.shadowColor='transparent';
+      ctx.strokeStyle='rgba(0,0,0,0.18)';
+      ctx.lineWidth=1;
+      ctx.strokeRect(-drawW/2, -drawH/2, drawW, drawH);
+    }
+    ctx.restore();
+  }
+
+  return { cols, rows, drawn: cells.length, reused: allowReuse };
+}
+
+
+// ===== merged modules =====
+const $ = s=>document.querySelector(s);
+const sourceDrop=$('#sourceDrop'), targetDrop=$('#targetDrop');
+const sourcePreview=$('#sourcePreview'), targetPreview=$('#targetPreview');
+const sourceFile=$('#sourceFile'), targetFile=$('#targetFile');
+const sourceUrl=$('#sourceUrl'), targetUrl=$('#targetUrl');
+const btnTear=$('#btnTear'), btnCompose=$('#btnCompose'), btnExport=$('#btnExport');
+const statusEl=$('#status'), trayEl=$('#tray'), paletteBar=$('#paletteBar');
+const collageCanvas=$('#collageCanvas'), mapCanvas=$('#mapCanvas');
+const pieceCountLabel=$('#pieceCountLabel');
+
+let sourceCanvas=null, targetCanvas=null; // offscreen canvases at native resolution
+let torn = null; // {pieces, palette}
+let brightnessMap=null;
+let targetW=0, targetH=0;
+let seeds=[]; // for seededUser mode: [{x,y,L}]
+
+function setStatus(m){ statusEl.textContent=m; }
+
+// ---------- image loading helpers ----------
+function canvasFromImage(img, maxSide=1200){
+  let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+  const s=Math.min(1, maxSide/Math.max(w,h));
+  w=Math.round(w*s); h=Math.round(h*s);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  c.getContext('2d').drawImage(img,0,0,w,h);
+  return c;
+}
+function drawPreview(previewCanvas, srcCanvas, dropEl){
+  const ctx=previewCanvas.getContext('2d');
+  const w=previewCanvas.width, h=previewCanvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#0b0e13'; ctx.fillRect(0,0,w,h);
+  if(!srcCanvas){ dropEl.classList.remove('hasImage'); return; }
+  const scale=Math.min(w/srcCanvas.width, h/srcCanvas.height);
+  const dw=srcCanvas.width*scale, dh=srcCanvas.height*scale;
+  const ox=(w-dw)/2, oy=(h-dh)/2;
+  ctx.drawImage(srcCanvas, ox,oy,dw,dh);
+  dropEl.classList.add('hasImage');
+}
+async function loadFromFile(file, kind){
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.decoding='async';
+  const loaded=await new Promise((res,rej)=>{ img.onload=()=>res(true); img.onerror=rej; img.src=url; });
+  const c=canvasFromImage(img);
+  URL.revokeObjectURL(url);
+  if(kind==='source'){ sourceCanvas=c; drawPreview(sourcePreview, sourceCanvas, sourceDrop); }
+  else { targetCanvas=c; targetW=c.width; targetH=c.height; drawPreview(targetPreview, targetCanvas, targetDrop); seeds=[]; }
+  setStatus(`Loaded ${kind}: ${c.width}×${c.height}`);
+}
+async function loadFromUrl(urlStr, kind){
+  if(!urlStr) return;
+  setStatus(`Fetching ${kind} URL…`);
+  // Try direct fetch as blob to avoid CORS taint if possible with crossorigin
+  try{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    await new Promise((res,rej)=>{
+      img.onload=res; img.onerror=()=>rej(new Error('CORS or 404'));
+      img.src=urlStr;
+    });
+    const c=canvasFromImage(img);
+    if(kind==='source'){ sourceCanvas=c; drawPreview(sourcePreview, sourceCanvas, sourceDrop); }
+    else { targetCanvas=c; targetW=c.width; targetH=c.height; drawPreview(targetPreview, targetCanvas, targetDrop); seeds=[]; }
+    setStatus(`Fetched ${kind}: ${c.width}×${c.height}`);
+  } catch(e){
+    // fallback fetch via proxy not included; instruct user
+    setStatus(`URL fetch failed (CORS). Try download & drop. ${e.message}`);
+    console.error(e);
+  }
+}
+
+// ---------- drag & drop ----------
+// Now file inputs are overlayed with opacity:0 covering the dropzone, so native
+// click opens the file picker even if JS failed to load. We keep JS only for
+// change/drag handling. Extra click handler is kept for keyboard access but not required.
+function wireDrop(dropEl, fileInput, kind){
+  fileInput.addEventListener('change', e=>{
+    if(e.target.files[0]) loadFromFile(e.target.files[0], kind);
+    // reset so same file can be re-selected
+    e.target.value='';
+  });
+  dropEl.addEventListener('dragover', e=>{ e.preventDefault(); dropEl.classList.add('dragover'); });
+  dropEl.addEventListener('dragleave', ()=> dropEl.classList.remove('dragover'));
+  dropEl.addEventListener('drop', e=>{
+    e.preventDefault(); dropEl.classList.remove('dragover');
+    const f=e.dataTransfer.files[0];
+    if(f) loadFromFile(f, kind);
+    else {
+      const url=e.dataTransfer.getData('text/uri-list')||e.dataTransfer.getData('text/plain');
+      if(url && url.startsWith('http')) loadFromUrl(url.trim(), kind);
+    }
+  });
+  // Prevent overlay input clicks from triggering seededUser logic underneath
+  fileInput.addEventListener('click', e=> e.stopPropagation());
+}
+wireDrop(sourceDrop, sourceFile, 'source');
+wireDrop(targetDrop, targetFile, 'target');
+$('#sourceUrlBtn').addEventListener('click', ()=> loadFromUrl(sourceUrl.value.trim(),'source'));
+$('#targetUrlBtn').addEventListener('click', ()=> loadFromUrl(targetUrl.value.trim(),'target'));
+sourceUrl.addEventListener('keydown', e=>{ if(e.key==='Enter') loadFromUrl(sourceUrl.value.trim(),'source'); });
+targetUrl.addEventListener('keydown', e=>{ if(e.key==='Enter') loadFromUrl(targetUrl.value.trim(),'target'); });
+
+// ---------- seeded user clicks ----------
+targetPreview.addEventListener('click', e=>{
+  if($('#targetMode').value!=='seededUser' || !targetCanvas) return;
+  const rect=targetPreview.getBoundingClientRect();
+  // map preview coords -> targetCanvas coords
+  const scaleX=targetCanvas.width / targetPreview.width;
+  const scaleY=targetCanvas.height / targetPreview.height;
+  // we drew centered with contain, need to account for letterbox
+  const previewScale=Math.min(targetPreview.width/targetCanvas.width, targetPreview.height/targetCanvas.height);
+  const dw=targetCanvas.width*previewScale, dh=targetCanvas.height*previewScale;
+  const ox=(targetPreview.width-dw)/2, oy=(targetPreview.height-dh)/2;
+  const px=e.clientX-rect.left - ox, py=e.clientY-rect.top - oy;
+  if(px<0||px>dw||py<0||py>dh) return;
+  const tx=Math.round(px/previewScale), ty=Math.round(py/previewScale);
+  // cycle L values: 0,25,50,75,100
+  const cycle=[0,25,50,75,100];
+  const L = cycle[seeds.length % cycle.length];
+  seeds.push({x:tx,y:ty,L});
+  drawSeedOverlays();
+  setStatus(`Seed ${seeds.length}: (${tx},${ty}) → L=${L}. Click again to add, right-click to undo.`);
+});
+targetPreview.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  if(seeds.length){ seeds.pop(); drawSeedOverlays(); setStatus(`Removed last seed. ${seeds.length} remain.`); }
+});
+function drawSeedOverlays(){
+  drawPreview(targetPreview, targetCanvas, targetDrop);
+  const ctx=targetPreview.getContext('2d');
+  const s=Math.min(targetPreview.width/targetCanvas.width, targetPreview.height/targetCanvas.height);
+  const dw=targetCanvas.width*s, dh=targetCanvas.height*s;
+  const ox=(targetPreview.width-dw)/2, oy=(targetPreview.height-dh)/2;
+  for(let i=0;i<seeds.length;i++){
+    const se=seeds[i];
+    const x=ox+se.x*s, y=oy+se.y*s;
+    ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2);
+    ctx.fillStyle= se.L<50 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.9)';
+    ctx.fill(); ctx.strokeStyle='#60a5fa'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle= se.L<50 ? 'white':'black';
+    ctx.font='10px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(se.L), x,y);
+  }
+}
+
+// ---------- controls binding ----------
+const controls={
+  paletteK: $('#paletteK'), pieceCount: $('#pieceCount'), roughness: $('#roughness'), anaSize: $('#anaSize'),
+  targetMode: $('#targetMode'), contrast: $('#contrast'), blur: $('#blur'),
+  gridCols: $('#gridCols'), lWeight: $('#lWeight'), scale: $('#scale'), rotation: $('#rotation'),
+  allowReuse: $('#allowReuse'), showSeams: $('#showSeams'), ignoreWhiteBg: $('#ignoreWhiteBg'), targetIsBW: $('#targetIsBW'),
+};
+function bindVal(input, labelId, fmt=v=>v){
+  const el=document.getElementById(labelId);
+  if(!el) return;
+  const upd=()=> el.textContent = input.value==0 && labelId==='vGrid' ? 'auto' : fmt(input.value);
+  input.addEventListener('input', upd); upd();
+}
+bindVal(controls.paletteK,'vPalette');
+bindVal(controls.pieceCount,'vPieces');
+bindVal(controls.roughness,'vRough', v=>Number(v).toFixed(2));
+bindVal(controls.anaSize,'vAna');
+bindVal(controls.contrast,'vContrast');
+bindVal(controls.blur,'vBlur');
+bindVal(controls.gridCols,'vGrid', v=> v==0?'auto':v);
+bindVal(controls.lWeight,'vW', v=>Number(v).toFixed(2));
+bindVal(controls.scale,'vScale', v=>Number(v).toFixed(2));
+controls.targetMode.addEventListener('change', ()=>{
+  const isUser=controls.targetMode.value==='seededUser';
+  $('#seedHint').classList.toggle('hidden', !isUser);
+  // seededUser: disable overlay file pick so canvas clicks place seeds; user can still drop or use URL
+  targetFile.style.pointerEvents = isUser ? 'none' : 'auto';
+  targetDrop.classList.toggle('seeded', isUser);
+  if(isUser) drawSeedOverlays();
+});
+$('#targetIsBW').addEventListener('change', ()=>{ if(targetCanvas) refreshMap(); });
+
+// ---------- tear ----------
+async function doTear(){
+  if(!sourceCanvas){ setStatus('Drop a source color image first.'); return; }
+  btnTear.disabled=true; setStatus('Tearing… quantizing & Voronoi…');
+  await new Promise(r=>setTimeout(r,30)); // yield
+  try{
+    const opts={
+      paletteK: Number(controls.paletteK.value),
+      pieceCount: Number(controls.pieceCount.value),
+      roughness: Number(controls.roughness.value),
+      anaSize: Number(controls.anaSize.value),
+    };
+    torn = await tearImage(sourceCanvas, opts);
+    renderTray();
+    setStatus(`Torn into ${torn.pieces.length} pieces (${opts.paletteK} shades). Now build target map & compose.`);
+    // auto refresh map/compose if target exists
+    if(targetCanvas) { refreshMap(); doCompose(false); }
+  } catch(e){ console.error(e); setStatus('Tear failed: '+e.message); }
+  finally{ btnTear.disabled=false; }
+}
+function renderTray(){
+  trayEl.innerHTML='';
+  paletteBar.innerHTML='';
+  if(!torn) return;
+  pieceCountLabel.textContent=`(${torn.pieces.length})`;
+  for(const p of torn.palette){
+    const s=document.createElement('span');
+    s.style.background=`rgb(${p.r},${p.g},${p.b})`;
+    s.title=`${p.r},${p.g},${p.b} L=${p.lab[0].toFixed(1)}`;
+    paletteBar.appendChild(s);
+  }
+  for(const piece of torn.pieces){
+    const d=document.createElement('div'); d.className='piece'; d.title=`L=${piece.lab[0].toFixed(1)} a=${piece.lab[1].toFixed(1)}`;
+    const c=document.createElement('canvas'); c.width=56; c.height=56;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#111'; ctx.fillRect(0,0,56,56);
+    // draw scaled
+    const s=Math.min(56/piece.canvas.width, 56/piece.canvas.height)*0.9;
+    const w=piece.canvas.width*s, h=piece.canvas.height*s;
+    ctx.drawImage(piece.canvas, (56-w)/2, (56-h)/2, w,h);
+    d.appendChild(c);
+    trayEl.appendChild(d);
+  }
+}
+
+// ---------- target map ----------
+function refreshMap(){
+  if(!targetCanvas) return;
+  const mode=controls.targetMode.value;
+  const contrast=Number(controls.contrast.value);
+  const blur=Number(controls.blur.value);
+  // build small map for preview, but compose uses full target size
+  // For accuracy, build at targetCanvas size capped
+  const maxMapSide=720;
+  const sc=Math.min(1, maxMapSide/Math.max(targetCanvas.width,targetCanvas.height));
+  const mw=Math.max(1, Math.round(targetCanvas.width*sc)), mh=Math.max(1, Math.round(targetCanvas.height*sc));
+  const tmp=document.createElement('canvas'); tmp.width=mw; tmp.height=mh;
+  tmp.getContext('2d').drawImage(targetCanvas,0,0,mw,mh);
+  brightnessMap = buildBrightnessMap(tmp, { mode, contrast, blur, seeds: [...seeds] });
+  targetW=mw; targetH=mh;
+  // we keep original targetCanvas for preview, but brightnessMap corresponds to mw*mh
+  renderMapToCanvas(brightnessMap, mw,mh, mapCanvas);
+  // also keep mapping for compose: we will compose at mw x mh then upscale to preview
+  // store scale factor
+  brightnessMap._w=mw; brightnessMap._h=mh;
+}
+
+// ---------- compose ----------
+async function doCompose(showStatus=true){
+  if(!torn){ setStatus('Tear source first.'); return; }
+  if(!targetCanvas){ setStatus('Drop a target B&W image first.'); return; }
+  if(!brightnessMap) refreshMap();
+  btnCompose.disabled=true;
+  if(showStatus) setStatus('Composing collage…');
+  await new Promise(r=>setTimeout(r,20));
+  try{
+    // compose at map size for speed, then stretch to collageCanvas sized to map
+    const outW=brightnessMap._w, outH=brightnessMap._h;
+    const tmp=document.createElement('canvas');
+    const opts={
+      gridCols: Number(controls.gridCols.value),
+      lWeight: Number(controls.lWeight.value),
+      scale: Number(controls.scale.value),
+      rotation: Number(controls.rotation.value),
+      allowReuse: controls.allowReuse.checked,
+      showSeams: controls.showSeams.checked,
+      ignoreWhiteBg: controls.ignoreWhiteBg.checked,
+    };
+    compose(tmp, torn.pieces, brightnessMap, outW, outH, opts);
+    // blit to visible collageCanvas at higher res (2x for crisp)
+    const dpr=Math.min(2, window.devicePixelRatio||1);
+    collageCanvas.width=outW*dpr; collageCanvas.height=outH*dpr;
+    collageCanvas.style.width=outW+'px'; collageCanvas.style.height=outH+'px';
+    const ctx=collageCanvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(tmp,0,0,outW,outH);
+    // keep tmp for export at 2x
+    collageCanvas._exportCanvas=tmp;
+    $('#collageInfo').textContent=`grid ${opts.gridCols||'auto'} · ${outW}×${outH} · L weight ${opts.lWeight}`;
+    if(showStatus) setStatus(`Composed ${outW}×${outH}. Tweak knobs & re-compose.`);
+  } catch(e){ console.error(e); setStatus('Compose failed: '+e.message); }
+  finally{ btnCompose.disabled=false; }
+}
+
+btnTear.addEventListener('click', doTear);
+btnCompose.addEventListener('click', ()=>{ refreshMap(); doCompose(true); });
+// live re-compose on knob change if already composed
+['gridCols','lWeight','scale','rotation','allowReuse','showSeams','ignoreWhiteBg'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('change', ()=>{ if(torn && brightnessMap) doCompose(false); });
+  if(el.type==='range') el.addEventListener('input', ()=>{ /* debounce */ });
+});
+controls.contrast.addEventListener('change', ()=>{ refreshMap(); if(torn) doCompose(false); });
+controls.blur.addEventListener('change', ()=>{ refreshMap(); if(torn) doCompose(false); });
+controls.targetMode.addEventListener('change', ()=>{ refreshMap(); if(torn) doCompose(false); });
+
+// export
+btnExport.addEventListener('click', ()=>{
+  const src = collageCanvas._exportCanvas || collageCanvas;
+  // export at 2x resolution for print
+  const scale=2;
+  const exp=document.createElement('canvas'); exp.width=src.width*scale; exp.height=src.height*scale;
+  exp.getContext('2d').drawImage(src,0,0,exp.width,exp.height);
+  const a=document.createElement('a');
+  a.download='collage.png';
+  a.href=exp.toDataURL('image/png');
+  a.click();
+  setStatus('Exported PNG.');
+});
+
+// demo: if no image, show placeholders
+drawPreview(sourcePreview, null, sourceDrop);
+drawPreview(targetPreview, null, targetDrop);
+setStatus('Drop source + target, or fetch via URL. Then Tear → Compose.');
+
+// expose for debugging
+window._state={ get sourceCanvas(){return sourceCanvas}, get targetCanvas(){return targetCanvas}, get torn(){return torn} };
+
+</script>
+</body>
+</html>

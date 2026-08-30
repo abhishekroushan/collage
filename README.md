@@ -69,3 +69,34 @@ docker build -t collage-backend backend && docker run -p 8000:8000 collage-backe
 ```
 
 See `frontend/README.md` for full workflow/pipeline/knobs and `backend/README.md` for API + Mojo integration.
+
+## GitHub Pages
+
+GitHub Pages serves the standalone build from the repository root (`index.html:1`, copied verbatim from `frontend/collage-standalone.html:1` — fully self-contained, no external `style.css`/`js/` deps, works at `https://abhishekroushan.github.io/collage/`). `.nojekyll` disables Jekyll processing.
+
+**Workflow after any edit to standalone:**
+
+```bash
+# 1. edit the source of truth
+#    frontend/collage-standalone.html
+
+# 2. sync to Pages root (verifies byte-identical copy)
+./scripts/sync-pages.sh
+
+# 3. commit both
+git add frontend/collage-standalone.html index.html
+git commit -m "update collage standalone + pages sync"
+```
+
+The sync script is `scripts/sync-pages.sh:1`. It does `cp frontend/collage-standalone.html index.html` and `touch .nojekyll`, then `diff -q` verification. Run it before every PR that touches the frontend; Pages deploys from `main` branch `/root` after merge.
+
+Optional pre-commit hook to auto-sync:
+
+```bash
+cat > .git/hooks/pre-commit <<'HOOK'
+#!/bin/sh
+./scripts/sync-pages.sh
+git add index.html
+HOOK
+chmod +x .git/hooks/pre-commit
+```
